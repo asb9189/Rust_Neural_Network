@@ -117,6 +117,16 @@ impl Matrix {
         v
     }
 
+    pub fn map<F>(&mut self, f: F)
+    where F: Fn(f64) -> f64 {
+        for r in 0..self.num_rows {
+            for c in 0..self.num_cols {
+                let x = self.matrix[r][c];
+                self.matrix[r][c] = f(x);
+            }
+        }
+    }
+
     pub fn display_dimensions(&self) {
         let nr = self.num_rows;
         let nc = self.num_cols;
