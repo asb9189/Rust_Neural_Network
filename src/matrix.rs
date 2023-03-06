@@ -1,36 +1,42 @@
 use std::ops::Range;
 use rand::prelude::*;
 
+#[derive(Clone)]
 pub struct Matrix {
     num_rows: usize,
     num_cols: usize,
     matrix: Vec<Vec<f64>>
 }
 
-// Matrix multiplication
+// Matrix multiplication (m1 * m2)
 // panics when the dimensions are not valid
-pub fn mul(m1: &Matrix, m2: &Matrix) {
+pub fn mul(m1: &Matrix, m2: &Matrix) -> Matrix {
     if m1.num_cols != m2.num_rows { panic!("Invalid dimensions for matrix multiplication") };
 
-    let mut v: Vec<f64> = vec![];
-
+    let mut result: Vec<Vec<f64>> = vec![];
     // for each row in m1
     for r in 0..(m1.num_rows) {
-        for c in 0..(m2.num_cols) {
-
-        }
-    }
+        let mut v: Vec<f64> = vec![];
+        let row = m1.get_row(r);
         // for each column in m2
+        for c in 0..(m2.num_cols) {
+            let col = m2.get_column(c);
+            // Perform dot product between the two vectors
+            let mut temp: Vec<f64> = vec![];
+            for i in 0..row.len() {
+                temp.push(row[i] * col[i]);
+            }
 
-        // dot product and store result in v
-
-    // after each column in m2 is done, add v into resulting vector
-    // and build matrix using from(...)
-
+            let entry: f64 = temp.iter().sum();
+            v.push(entry);
+        }
+        result.push(v.clone());
+    }
+    Matrix::from(result)
 }
 
 impl Matrix {
-
+    
     /// Returns zero nr x nc matrix
     pub fn new(nr: usize, nc: usize) -> Matrix {
         let mut matrix: Vec<Vec<f64>> = Vec::new();
@@ -109,6 +115,22 @@ impl Matrix {
         };
             
         v
+    }
+
+    pub fn map<F>(&mut self, f: F)
+    where F: Fn(f64) -> f64 {
+        for r in 0..self.num_rows {
+            for c in 0..self.num_cols {
+                let x = self.matrix[r][c];
+                self.matrix[r][c] = f(x);
+            }
+        }
+    }
+
+    pub fn display_dimensions(&self) {
+        let nr = self.num_rows;
+        let nc = self.num_cols;
+        println!("{nr}x{nc}");
     }
 
     pub fn display(&self) {
