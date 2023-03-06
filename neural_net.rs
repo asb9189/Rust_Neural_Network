@@ -1,17 +1,18 @@
-use core::num;
 use std::{ops::Range, f64::consts::E};
-
 use crate::matrix::{Matrix, self};
 
 pub struct NeuralNet {
+
+    // Number of input nodes for the neural network
     num_input_nodes: usize,
-    num_output_nodes: usize,
-    hidden_layers: Vec<HiddenLayer>,
-    output_layer: OutputLayer,
+
+    // where index 0 is the activation function for the first
+    //  hidden layer and index (len - 1) is the af for the output layer
     activation_functions: Vec<ActivationFunction>,
+
+    // where index 0 is the weight matrix for the first hidden layer
+    //  and index (len - 1) is the weight matrix for the output layer
     weights: Vec<Matrix>
-        // index 0 is the weight matrix for the first hidden layer
-        // index 'len - 1' is the weight matrix for the output layer
 }
 
 impl NeuralNet {
@@ -49,19 +50,35 @@ impl NeuralNet {
         ));
 
         let l = weights.len();
-        println!("Matrix has {l} weight matrices");
 
         assert!(weights.len() == afs.len(), "internal error creating neural network");
 
         NeuralNet {
             num_input_nodes: num_input_nodes,
-            num_output_nodes: output_layer.num_nodes,
-            hidden_layers: hidden_layers,
-            output_layer: output_layer,
             activation_functions: afs,
             weights: weights,
         }
 
+    }
+
+    pub fn display(&self) {
+
+        println!("##### Weight Matrices of Neural Network #####");
+
+        let mut i = 0;
+        let last_i = &self.weights.len() - 1;
+        for wm in &self.weights {
+            if i == last_i {
+                println!("output layer:\n");
+                wm.display();
+            } else {
+                println!("{i}th hidden layer:\n");
+                wm.display();
+            }
+            i += 1;
+        }
+        
+        println!("#############################################");
     }
 
     pub fn forward(&self, input: Vec<f64>) -> Matrix {
@@ -89,7 +106,7 @@ impl NeuralNet {
 pub struct HiddenLayer {
     bias: f64,
     num_nodes: usize,
-    init_weights: Option<Vec<Matrix>>, // Not needed but nice to have
+    init_weights: Option<Matrix>, // Not needed but nice to have
     weight_init_range: Option<Range<f64>>,
     activation_function: ActivationFunction
 }
@@ -98,7 +115,7 @@ impl HiddenLayer {
     pub fn new (
         bias: f64,
         num_nodes: usize,
-        init_weights: Option<Vec<Matrix>>,
+        init_weights: Option<Matrix>,
         weight_init_range: Option<Range<f64>>,
         activation_function: ActivationFunction
     ) -> HiddenLayer {
@@ -125,7 +142,6 @@ pub struct OutputLayer {
 impl OutputLayer {
     pub fn new(num_nodes: usize, range: Option<Range<f64>>, af: ActivationFunction) -> OutputLayer {
         if num_nodes == 0 { panic!("Output layer cannot have zero nodes") }
-
         OutputLayer { 
             num_nodes: num_nodes,
             activation_function: af,
