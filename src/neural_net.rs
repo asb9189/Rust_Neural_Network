@@ -30,13 +30,22 @@ impl NeuralNet {
         let mut afs: Vec<ActivationFunction> = vec![];
         let mut prev_node_count = num_input_nodes;
         for hl in hidden_layers.iter_mut() {
-            let matrix = Matrix::from_range(
-                prev_node_count,
-                hl.num_nodes,
-                (hl.weight_init_range.clone()).unwrap()
-            );
+            if hl.init_weights.is_some() {
+                let matrix = hl.init_weights.as_ref().unwrap().clone();
+                
+                // check that given initial weights are valid
+                if matrix.num_rows() != prev_node_count { panic!("Invalid initial weights matrix given") }
+                if matrix.num_cols() != hl.num_nodes { panic!("Invalid initial weights matrix given") }
 
-            weights.push(matrix);
+                weights.push(matrix);
+            } else {
+                let matrix = Matrix::from_range(
+                    prev_node_count,
+                    hl.num_nodes,
+                    (hl.weight_init_range.clone()).unwrap()
+                );
+                weights.push(matrix);
+            }
             afs.push(hl.activation_function);
             prev_node_count = hl.num_nodes;
         }
@@ -48,8 +57,6 @@ impl NeuralNet {
             output_layer.num_nodes,
             (output_layer.weight_init_range.clone()).unwrap()
         ));
-
-        let l = weights.len();
 
         assert!(weights.len() == afs.len(), "internal error creating neural network");
 
@@ -106,7 +113,7 @@ impl NeuralNet {
 pub struct HiddenLayer {
     bias: f64,
     num_nodes: usize,
-    init_weights: Option<Matrix>, // Not needed but nice to have
+    init_weights: Option<Matrix>,
     weight_init_range: Option<Range<f64>>,
     activation_function: ActivationFunction
 }
@@ -120,16 +127,38 @@ impl HiddenLayer {
         activation_function: ActivationFunction
     ) -> HiddenLayer {
 
-        if init_weights.is_some() { panic!("Initial weights unimplemented!") }
+        if num_nodes == 0 { panic!("Cannot create hidden layer with zero nodes") }
 
-        HiddenLayer { 
-            bias: bias,
-            num_nodes: num_nodes,
-            init_weights: init_weights,
-            weight_init_range: weight_init_range,
-            activation_function: activation_function
+        match init_weights {
+            Some(iw) => {
+                match weight_init_range {
+                    Some(_) => panic!("cannot apply weight_init_range to given init_weights"),
+                    None => {
+                        HiddenLayer {
+                            bias: bias,
+                            num_nodes: num_nodes,
+                            init_weights: Some(iw),
+                            weight_init_range: None,
+                            activation_function: activation_function
+                        }
+                    }
+                }
+            },
+            None => {
+                match weight_init_range {
+                    Some(range) => {
+                        HiddenLayer { 
+                            bias: bias,
+                            num_nodes: num_nodes,
+                            init_weights: None,
+                            weight_init_range: Some(range),
+                            activation_function: activation_function
+                        }
+                    },
+                    None => panic!("weight_init_range necessary if init_weights not given")
+                }
+            }
         }
-
     }
 }
 
@@ -139,6 +168,7 @@ pub struct OutputLayer {
     weight_init_range: Option<Range<f64>>
 }
 
+// TODO support init_weights just like hidden layer
 impl OutputLayer {
     pub fn new(num_nodes: usize, range: Option<Range<f64>>, af: ActivationFunction) -> OutputLayer {
         if num_nodes == 0 { panic!("Output layer cannot have zero nodes") }
@@ -185,4 +215,101 @@ fn sigmoid(x: f64) -> f64 {
 // https://www.mathworks.com/help/matlab/ref/tanh.html
 fn tanh(x: f64) -> f64 {
     (E.powf(2.0 * x) - 1.0) / (E.powf(2.0 * x) + 1.0)
+}
+
+// ###################################################################################################
+
+#[cfg(test)]
+mod tests {
+    use super::{NeuralNet, HiddenLayer, OutputLayer, ActivationFunction};
+
+    #[test]
+    fn build_nn_00() {
+        NeuralNet::new (
+            1,
+            vec![],
+            OutputLayer::new(
+                1,
+                Some(-1.0..1.0),
+                ActivationFunction::Identity
+            ),
+        );
+    }
+
+    #[test]
+    fn build_nn_01() {
+        NeuralNet::new (
+            1,
+            vec![
+                HiddenLayer::new(
+                    0.0,
+                    5,
+                    None,
+                    Some(-1.0..1.0),
+                    ActivationFunction::Identity
+                )
+            ],
+            OutputLayer::new(
+                1,
+                Some(-1.0..1.0),
+                ActivationFunction::Identity
+            ),
+        );
+    }
+
+    #[test]
+    fn build_nn_02() {
+        NeuralNet::new (
+            1,
+            vec![
+                HiddenLayer::new(
+                    0.0,
+                    5,
+                    None,
+                    Some(-1.0..1.0),
+                    ActivationFunction::Identity
+                ),
+                HiddenLayer::new(
+                    0.0,
+                    3,
+                    None,
+                    Some(-1.0..1.0),
+                    ActivationFunction::Identity
+                ),
+            ],
+            OutputLayer::new(
+                1,
+                Some(-1.0..1.0),
+                ActivationFunction::Identity
+            ),
+        );
+    }
+
+    #[test]
+    #[should_panic]
+    fn build_fail_nn_00() {
+        NeuralNet::new (
+            0,
+            vec![],
+            OutputLayer::new(
+                1,
+                Some(-1.0..1.0),
+                ActivationFunction::Identity
+            ),
+        );
+    }
+
+    #[test]
+    #[should_panic]
+    fn build_fail_nn_01() {
+        NeuralNet::new (
+            1,
+            vec![],
+            OutputLayer::new(
+                0,
+                Some(-1.0..1.0),
+                ActivationFunction::Identity
+            ),
+        );
+    }
 }

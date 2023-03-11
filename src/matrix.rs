@@ -127,6 +127,14 @@ impl Matrix {
         }
     }
 
+    pub fn num_cols(&self) -> usize {
+        self.num_cols
+    }
+
+    pub fn num_rows(&self) -> usize {
+        self.num_rows
+    }
+
     pub fn display_dimensions(&self) {
         let nr = self.num_rows;
         let nc = self.num_cols;
