@@ -1,5 +1,3 @@
-use neural_net::OutputLayer;
-
 mod matrix;
 mod neural_net;
 
