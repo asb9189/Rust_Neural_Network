@@ -7,15 +7,23 @@ fn main() {
         vec![
             neural_net::HiddenLayer::new(
                 0.0,
-                5,
-                Some(matrix::Matrix::new(2, 5)),
+                3,
+                Some(matrix::Matrix::from(vec![
+                    vec![1.0, 2.0, 3.0],
+                    vec![4.0, 5.0, 6.0]
+                ])),
                 None,
-                neural_net::ActivationFunction::Sigmoid
+                neural_net::ActivationFunction::Identity
             ),
         ],
         neural_net::OutputLayer::new (
-            3,
-            Some(0.0..10.0),
+            1,
+            Some(matrix::Matrix::from(vec![
+                vec![1.0],
+                vec![2.0],
+                vec![3.0]
+            ])),
+            None,
             neural_net::ActivationFunction::Identity
         )
     );

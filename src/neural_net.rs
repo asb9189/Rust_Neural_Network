@@ -52,11 +52,22 @@ impl NeuralNet {
 
         // Add output layer weights to NN weight matrix
         afs.push(output_layer.activation_function);
-        weights.push(Matrix::from_range(
-            prev_node_count,
-            output_layer.num_nodes,
-            (output_layer.weight_init_range.clone()).unwrap()
-        ));
+
+        if output_layer.init_weights.is_some() {
+            let matrix = output_layer.init_weights.as_ref().unwrap().clone();
+
+            // check that given initial weights are valid
+            if matrix.num_rows() != prev_node_count { panic!("Invalid initial output weights matrix given") }
+            if matrix.num_cols() != output_layer.num_nodes { panic!("Invalid initial output weights matrix given") }
+
+            weights.push(matrix);
+        } else {
+            weights.push(Matrix::from_range(
+                prev_node_count,
+                output_layer.num_nodes,
+                (output_layer.weight_init_range.clone()).unwrap()
+            ));
+        }
 
         assert!(weights.len() == afs.len(), "internal error creating neural network");
 
@@ -165,17 +176,41 @@ impl HiddenLayer {
 pub struct OutputLayer {
     num_nodes: usize,
     activation_function: ActivationFunction,
-    weight_init_range: Option<Range<f64>>
+    weight_init_range: Option<Range<f64>>,
+    init_weights: Option<Matrix>,
 }
 
-// TODO support init_weights just like hidden layer
 impl OutputLayer {
-    pub fn new(num_nodes: usize, range: Option<Range<f64>>, af: ActivationFunction) -> OutputLayer {
+    pub fn new(num_nodes: usize, init_weights: Option<Matrix>, range: Option<Range<f64>>, af: ActivationFunction) -> OutputLayer {
         if num_nodes == 0 { panic!("Output layer cannot have zero nodes") }
-        OutputLayer { 
-            num_nodes: num_nodes,
-            activation_function: af,
-            weight_init_range: range,
+
+        match init_weights {
+            Some(iw) => {
+                match range {
+                    Some(_) => panic!("cannot apply weight_init_range to given init_weights"),
+                    None => {
+                        OutputLayer { 
+                            num_nodes: num_nodes,
+                            activation_function: af,
+                            weight_init_range: range,
+                            init_weights: Some(iw)
+                        }
+                    }
+                }
+            },
+            None => {
+                match range {
+                    Some(range) => {
+                        OutputLayer { 
+                            num_nodes: num_nodes,
+                            activation_function: af,
+                            weight_init_range: Some(range),
+                            init_weights: None
+                        }
+                    },
+                    None => panic!("weight_init_range necessary if init_weights not given")
+                }
+            }
         }
     }
 }
@@ -221,6 +256,8 @@ fn tanh(x: f64) -> f64 {
 
 #[cfg(test)]
 mod tests {
+    
+    use crate::matrix::Matrix;
     use super::{NeuralNet, HiddenLayer, OutputLayer, ActivationFunction};
 
     #[test]
@@ -230,6 +267,7 @@ mod tests {
             vec![],
             OutputLayer::new(
                 1,
+                None,
                 Some(-1.0..1.0),
                 ActivationFunction::Identity
             ),
@@ -251,6 +289,7 @@ mod tests {
             ],
             OutputLayer::new(
                 1,
+                None,
                 Some(-1.0..1.0),
                 ActivationFunction::Identity
             ),
@@ -279,10 +318,46 @@ mod tests {
             ],
             OutputLayer::new(
                 1,
+                None,
                 Some(-1.0..1.0),
                 ActivationFunction::Identity
             ),
         );
+    }
+
+    #[test]
+    fn forward_nn_00() {
+        let nn = NeuralNet::new (
+            2,
+            vec![
+                HiddenLayer::new(
+                    0.0,
+                    3,
+                    Some(Matrix::from(vec![
+                        vec![1.0, 2.0, 3.0],
+                        vec![4.0, 5.0, 6.0]
+                    ])),
+                    None,
+                    ActivationFunction::Identity
+                ),
+            ],
+            OutputLayer::new (
+                1,
+                Some(Matrix::from(vec![
+                    vec![1.0],
+                    vec![2.0],
+                    vec![3.0]
+                ])),
+                None,
+                ActivationFunction::Identity
+            )
+        );
+
+        let result = nn.forward(vec![-5.0, 5.0]);
+        assert!(result.num_rows() == 1);
+        assert!(result.num_cols() == 1);
+
+        assert!((result.get_row(0))[0] == 90.0);
     }
 
     #[test]
@@ -293,6 +368,7 @@ mod tests {
             vec![],
             OutputLayer::new(
                 1,
+                None,
                 Some(-1.0..1.0),
                 ActivationFunction::Identity
             ),
@@ -307,6 +383,7 @@ mod tests {
             vec![],
             OutputLayer::new(
                 0,
+                None,
                 Some(-1.0..1.0),
                 ActivationFunction::Identity
             ),
