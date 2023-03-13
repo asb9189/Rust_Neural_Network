@@ -62,7 +62,8 @@ impl Matrix {
         for _ in 0..nr {
             let mut temp: Vec<f64> = Vec::new();
             for _ in 0..nc {
-                let n = rng.gen_range(range.clone());
+                let n: f64 = rng.gen_range(range.start, range.end);
+                //let n = rng.gen_range(range.clone()); rand = "^0.7.0" uses older def of gen_range
                 temp.push(n);
             }
             matrix.push(temp);
@@ -95,6 +96,18 @@ impl Matrix {
         }
     }
 
+    pub fn get(&self, row_index: usize, column_index: usize) -> f64 {
+        if row_index >= self.num_rows { panic!("row index out of bounds") };
+        if column_index >= self.num_cols { panic!("column index out of bounds") };
+        self.matrix[row_index][column_index]
+    }
+
+    pub fn put(&mut self, f: f64, row_index: usize, column_index: usize) {
+        if row_index >= self.num_rows { panic!("row index out of bounds") };
+        if column_index >= self.num_cols { panic!("column index out of bounds") };
+        self.matrix[row_index][column_index] = f;
+    }
+
     pub fn get_row(&self, row_index: usize) -> Vec<f64> {
         let mut v: Vec<f64> = vec![];
 
@@ -115,6 +128,10 @@ impl Matrix {
         };
             
         v
+    }
+
+    pub fn get_dimensions(&self) -> (usize, usize) {
+        (self.num_rows, self.num_cols)
     }
 
     pub fn map<F>(&mut self, f: F)

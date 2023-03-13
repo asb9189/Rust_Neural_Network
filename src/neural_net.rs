@@ -1,6 +1,8 @@
 use std::{ops::Range, f64::consts::E};
 use crate::matrix::{Matrix, self};
+use rand::prelude::*;
 
+#[derive(Clone)]
 pub struct NeuralNet {
 
     // Number of input nodes for the neural network
@@ -17,6 +19,77 @@ pub struct NeuralNet {
      // where index 0 is the bias for the first hidden layer
     //  and index (len - 1) is the bias for the output layer
     biases: Vec<f64>
+}
+
+pub fn combine(n1: NeuralNet, n2: NeuralNet) -> NeuralNet {
+
+    // check that both neural nets have the same topology
+    if n1.num_input_nodes != n2.num_input_nodes { panic!() };
+    if n1.activation_functions.len() != n2.activation_functions.len() { panic!() };
+    if n1.weights.len() != n2.weights.len() { panic!() };
+    if n1.biases != n2.biases { panic!() }
+
+    let mut index = 0;
+    for af in &n1.activation_functions {
+        let af2 = n2.activation_functions.get(index).unwrap();
+        if af != af2 { panic!() }
+
+        index += 1;
+    };
+
+    index = 0;
+    for m in &n1.weights {
+        let m2 = n2.weights.get(index).unwrap();
+        if m.get_dimensions() != m2.get_dimensions() { panic!() };
+        index += 1;
+    };
+
+    // combine knowing that both nets have the exact same topology + activation functions
+
+    let mut new_weights: Vec<Matrix> = vec![];
+
+    index = 0;
+    let mut rng = rand::thread_rng();
+    for m in &n1.weights {
+        let mut rows: Vec<Vec<f64>> = vec![];
+        let m2 = n2.weights.get(index).unwrap();
+        for r in 0..m.num_rows() {
+            let mut row: Vec<f64> = vec![];
+            for c in 0..m.num_cols() {
+                let v1 = m.get(r, c);
+                let v2 = m2.get(r, c);
+
+                let r = rng.gen_range(0.0, 1.0);
+                if r >= 0.5 {
+                    row.push(v1);
+                } else {
+                    row.push(v2);
+                }
+            }
+            rows.push(row);
+        }
+        
+        new_weights.push(Matrix::from(rows));
+        index += 1;
+    };
+
+    let mut new_biases: Vec<f64> = vec![];
+    for i in 0..n1.biases.len() {
+        let r = rng.gen_range(0.0, 1.0);
+        if r >= 0.5 {
+            new_biases.push(*n1.biases.get(i).unwrap());
+        } else {
+            new_biases.push(*n2.biases.get(i).unwrap());
+        }
+    }
+
+
+    let mut new_nn = n1.clone();
+    new_nn.weights = new_weights;
+    new_nn.biases = new_biases;
+
+    new_nn
+
 }
 
 impl NeuralNet {
@@ -127,6 +200,20 @@ impl NeuralNet {
 
         result
     }
+
+    pub fn mutate(&mut self) {
+        let mut rng = rand::thread_rng();
+        for m in &mut self.weights {
+            for r in 0..m.num_rows() {
+                for c in 0..m.num_cols() {
+                    let n: f64 = rng.gen_range(-5.0, 5.0);
+                    let oldv = m.get(r, c);
+                    let newv = oldv + n;
+                    m.put(newv, r, c);
+                }
+            }
+        }
+    }
 }
 
 
@@ -228,7 +315,7 @@ impl OutputLayer {
 }
 
 #[allow(dead_code)]
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, PartialEq)]
 pub enum ActivationFunction {
     Identity,
     Step(f64),
