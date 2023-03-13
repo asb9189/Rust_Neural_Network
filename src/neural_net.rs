@@ -12,24 +12,29 @@ pub struct NeuralNet {
 
     // where index 0 is the weight matrix for the first hidden layer
     //  and index (len - 1) is the weight matrix for the output layer
-    weights: Vec<Matrix>
+    weights: Vec<Matrix>,
+
+     // where index 0 is the bias for the first hidden layer
+    //  and index (len - 1) is the bias for the output layer
+    biases: Vec<f64>
 }
 
 impl NeuralNet {
     pub fn new (
         num_input_nodes: usize,
-        mut hidden_layers: Vec<HiddenLayer>,
+        hidden_layers: Vec<HiddenLayer>,
         output_layer: OutputLayer
     ) -> NeuralNet {
 
         let mut weights: Vec<Matrix> = vec![];
+        let mut biases: Vec<f64> = vec![];
 
         if num_input_nodes == 0 { panic!("NeuralNet cannot have zero inputs") };
         if output_layer.num_nodes == 0 { panic!("NeuralNet cannot have zero output nodes") };
 
         let mut afs: Vec<ActivationFunction> = vec![];
         let mut prev_node_count = num_input_nodes;
-        for hl in hidden_layers.iter_mut() {
+        for hl in hidden_layers.iter() {
             if hl.init_weights.is_some() {
                 let matrix = hl.init_weights.as_ref().unwrap().clone();
                 
@@ -46,11 +51,13 @@ impl NeuralNet {
                 );
                 weights.push(matrix);
             }
+            biases.push(hl.bias);
             afs.push(hl.activation_function);
             prev_node_count = hl.num_nodes;
         }
 
         // Add output layer weights to NN weight matrix
+        biases.push(output_layer.bias);
         afs.push(output_layer.activation_function);
 
         if output_layer.init_weights.is_some() {
@@ -75,10 +82,12 @@ impl NeuralNet {
             num_input_nodes: num_input_nodes,
             activation_functions: afs,
             weights: weights,
+            biases: biases
         }
 
     }
 
+    #[allow(dead_code)]
     pub fn display(&self) {
 
         println!("##### Weight Matrices of Neural Network #####");
@@ -108,7 +117,7 @@ impl NeuralNet {
         for i in 0..(self.weights.len()) {
             result = matrix::mul(&input, &self.weights[i]);
             result.map(|x| {
-                activate(x, self.activation_functions[i])
+                activate(x + &self.biases[i], self.activation_functions[i])
             });
 
             // After 'mul' add bias to each value from layer's bias
@@ -174,6 +183,7 @@ impl HiddenLayer {
 }
 
 pub struct OutputLayer {
+    bias: f64,
     num_nodes: usize,
     activation_function: ActivationFunction,
     weight_init_range: Option<Range<f64>>,
@@ -181,7 +191,7 @@ pub struct OutputLayer {
 }
 
 impl OutputLayer {
-    pub fn new(num_nodes: usize, init_weights: Option<Matrix>, range: Option<Range<f64>>, af: ActivationFunction) -> OutputLayer {
+    pub fn new(bias: f64, num_nodes: usize, init_weights: Option<Matrix>, range: Option<Range<f64>>, af: ActivationFunction) -> OutputLayer {
         if num_nodes == 0 { panic!("Output layer cannot have zero nodes") }
 
         match init_weights {
@@ -189,7 +199,8 @@ impl OutputLayer {
                 match range {
                     Some(_) => panic!("cannot apply weight_init_range to given init_weights"),
                     None => {
-                        OutputLayer { 
+                        OutputLayer {
+                            bias: bias,
                             num_nodes: num_nodes,
                             activation_function: af,
                             weight_init_range: range,
@@ -201,7 +212,8 @@ impl OutputLayer {
             None => {
                 match range {
                     Some(range) => {
-                        OutputLayer { 
+                        OutputLayer {
+                            bias: bias,
                             num_nodes: num_nodes,
                             activation_function: af,
                             weight_init_range: Some(range),
@@ -215,6 +227,7 @@ impl OutputLayer {
     }
 }
 
+#[allow(dead_code)]
 #[derive(Copy, Clone)]
 pub enum ActivationFunction {
     Identity,
@@ -266,6 +279,7 @@ mod tests {
             1,
             vec![],
             OutputLayer::new(
+                0.0,
                 1,
                 None,
                 Some(-1.0..1.0),
@@ -288,6 +302,7 @@ mod tests {
                 )
             ],
             OutputLayer::new(
+                0.0,
                 1,
                 None,
                 Some(-1.0..1.0),
@@ -317,6 +332,7 @@ mod tests {
                 ),
             ],
             OutputLayer::new(
+                0.0,
                 1,
                 None,
                 Some(-1.0..1.0),
@@ -342,6 +358,7 @@ mod tests {
                 ),
             ],
             OutputLayer::new (
+                0.0,
                 1,
                 Some(Matrix::from(vec![
                     vec![1.0],
@@ -367,6 +384,7 @@ mod tests {
             0,
             vec![],
             OutputLayer::new(
+                0.0,
                 1,
                 None,
                 Some(-1.0..1.0),
@@ -382,6 +400,7 @@ mod tests {
             1,
             vec![],
             OutputLayer::new(
+                0.0,
                 0,
                 None,
                 Some(-1.0..1.0),

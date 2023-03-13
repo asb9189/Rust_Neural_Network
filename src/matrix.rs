@@ -135,12 +135,14 @@ impl Matrix {
         self.num_rows
     }
 
+    #[allow(dead_code)]
     pub fn display_dimensions(&self) {
         let nr = self.num_rows;
         let nc = self.num_cols;
         println!("{nr}x{nc}");
     }
 
+    #[allow(dead_code)]
     pub fn display(&self) {
         let nr = self.num_rows;
         let nc = self.num_cols;

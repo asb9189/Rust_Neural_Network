@@ -5,7 +5,7 @@ fn main() {
     let nn = neural_net::NeuralNet::new (
         2,
         vec![
-            neural_net::HiddenLayer::new(
+            neural_net::HiddenLayer::new (
                 0.0,
                 3,
                 Some(matrix::Matrix::from(vec![
@@ -17,6 +17,7 @@ fn main() {
             ),
         ],
         neural_net::OutputLayer::new (
+            0.0,
             1,
             Some(matrix::Matrix::from(vec![
                 vec![1.0],
